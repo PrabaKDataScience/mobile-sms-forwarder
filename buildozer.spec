@@ -56,8 +56,11 @@ android.ndk_api = 24
 # (bool) Use --private data storage (True) or --dir public storage (False)
 android.private_storage = True
 
+# (bool) Automatically accept Android SDK licenses
+android.accept_sdk_license = True
+
 # (list) The Android architectures to build for.
-android.archs = arm64-v8a, armeabi-v7a
+android.archs = arm64-v8a
 
 # (list) Java source folders to add
 android.add_src = src
