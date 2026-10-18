@@ -1,0 +1,14 @@
+{
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "use_ssl": false,
+    "sender_email": "your_email@gmail.com",
+    "sender_password": "your_16_char_app_password_here",
+    "recipient_emails": [
+        "destination1@example.com",
+        "destination2@example.com"
+    ],
+    "subject_prefix": "[SMS Forwarded]",
+    "device_name": "My Mobile Phone",
+    "is_active": true
+}

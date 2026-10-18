@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# App local configuration (keep your email passwords safe!)
+# Comment out if you want to bundle default settings into your APK
+sms_forwarder_config.json
+.env
+.env.*
+!.env.example
+
+# Buildozer and Android build artifacts
+.buildozer/
+bin/
+*.apk
+*.aab
+
+# Kivy
+.kivy/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
