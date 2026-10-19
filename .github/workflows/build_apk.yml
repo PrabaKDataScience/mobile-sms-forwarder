@@ -1,4 +1,4 @@
-name: Build Android APK with Buildozer
+name: Mobile SMS Forwarder CI/CD
 
 on:
   push:
@@ -8,14 +8,58 @@ on:
   workflow_dispatch: # Allows manual trigger from GitHub Actions web UI
 
 jobs:
-  build:
+  # ========================================================
+  # STAGE 1: Code Quality, Integrity & Security Audit
+  # ========================================================
+  validate:
+    name: "Stage 1: Validate & Audit"
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Cache Buildozer Global Directory
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Check for Accidentally Committed Secrets
+        run: |
+          echo "🔍 Auditing repository for sensitive credentials..."
+          if git ls-files | grep -E '^(\.env|sms_forwarder_config\.json)$'; then
+            echo "❌ ERROR: Sensitive configuration or .env file is tracked in Git!"
+            exit 1
+          fi
+          echo "✅ Security check passed: No sensitive credentials tracked."
+
+      - name: Verify Python Code Syntax
+        run: |
+          echo "🔍 Compiling Python source files..."
+          python -m py_compile main.py forwarder.py android_listener.py service.py test_cli.py
+          echo "✅ Syntax check passed: All Python modules compile cleanly."
+
+      - name: Validate Buildozer Specification
+        run: |
+          echo "🔍 Checking buildozer.spec integrity..."
+          test -f buildozer.spec || (echo "❌ buildozer.spec is missing!" && exit 1)
+          grep -q "package.name" buildozer.spec || (echo "❌ package.name is missing in buildozer.spec" && exit 1)
+          grep -q "android.permissions" buildozer.spec || (echo "❌ android.permissions is missing in buildozer.spec" && exit 1)
+          echo "✅ Configuration check passed: buildozer.spec is valid."
+
+  # ========================================================
+  # STAGE 2: Android APK Compilation
+  # ========================================================
+  build-apk:
+    name: "Stage 2: Compile Android APK"
+    needs: [validate]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Restore Buildozer Global Cache
         uses: actions/cache@v4
         with:
           path: ~/.buildozer
@@ -23,13 +67,13 @@ jobs:
           restore-keys: |
             buildozer-${{ runner.os }}-
 
-      - name: Prepare Workspace and Cache Permissions
+      - name: Configure Cache and Workspace Permissions
         run: |
           mkdir -p ~/.buildozer
           sudo chmod -R 777 ~/.buildozer
           sudo chmod -R 777 .
 
-      - name: Build APK with Official Kivy Buildozer Image
+      - name: Compile APK via Official Kivy Buildozer Container
         run: |
           docker run --rm \
             --volume "${HOME}/.buildozer":/home/user/.buildozer \
@@ -37,9 +81,66 @@ jobs:
             ghcr.io/kivy/buildozer:latest \
             android debug
 
-      - name: Upload APK Artifact
+      - name: Stash APK for Release Stage
         uses: actions/upload-artifact@v4
         with:
-          name: SMSForwarder-debug-apk
+          name: intermediate-build-output
           path: bin/*.apk
-          retention-days: 14
+          retention-days: 1
+
+  # ========================================================
+  # STAGE 3: Inspection, Checksum & Release Delivery
+  # ========================================================
+  publish-apk:
+    name: "Stage 3: Inspect & Deliver Artifact"
+    needs: [build-apk]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Compiled APK
+        uses: actions/download-artifact@v4
+        with:
+          name: intermediate-build-output
+          path: bin/
+
+      - name: Inspect APK & Compute Checksum
+        id: inspect
+        run: |
+          APK_FILE=$(ls bin/*.apk | head -n 1)
+          APK_NAME=$(basename "$APK_FILE")
+          APK_SIZE=$(du -h "$APK_FILE" | cut -f1)
+          APK_HASH=$(sha256sum "$APK_FILE" | cut -d' ' -f1)
+          
+          echo "apk_name=$APK_NAME" >> $GITHUB_OUTPUT
+          echo "apk_size=$APK_SIZE" >> $GITHUB_OUTPUT
+          echo "apk_hash=$APK_HASH" >> $GITHUB_OUTPUT
+          
+          echo "=============================================="
+          echo "APK Ready: $APK_NAME"
+          echo "Size:      $APK_SIZE"
+          echo "SHA-256:   $APK_HASH"
+          echo "=============================================="
+
+      - name: Generate GitHub Job Summary
+        run: |
+          echo "## 📱 SMS Forwarder Android APK Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Package File** | \`${{ steps.inspect.outputs.apk_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **File Size** | \`${{ steps.inspect.outputs.apk_size }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **SHA-256 Checksum** | \`${{ steps.inspect.outputs.apk_hash }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Target Architecture** | ARM64-v8a (Android 7.0+) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📲 Installation Instructions:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download the **\`SMSForwarder-Android-APK\`** artifact from below." >> $GITHUB_STEP_SUMMARY
+          echo "2. Transfer the \`.apk\` to your Android phone (USB, Google Drive, or messaging)." >> $GITHUB_STEP_SUMMARY
+          echo "3. Tap the APK to install (enable *Install unknown apps* for your browser/file manager if asked)." >> $GITHUB_STEP_SUMMARY
+          echo "4. Open **SMS Forwarder**, grant SMS permissions, and set Battery optimization to **Unrestricted**." >> $GITHUB_STEP_SUMMARY
+
+      - name: Publish Final Downloadable Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SMSForwarder-Android-APK
+          path: bin/*.apk
+          retention-days: 30
