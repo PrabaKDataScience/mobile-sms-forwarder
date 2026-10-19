@@ -27,7 +27,7 @@ mobile_message_forwarder/
 ├── buildozer.spec                 # Buildozer packaging specification for Android APK
 ├── sms_forwarder_config.example.json # Safe configuration template for git commits
 ├── .env.example                   # Environment variable template
-├── requirements.txt               # Python package dependencies
+├── requirements-desktop.txt       # Optional desktop GUI dependencies
 ├── src/
 │   └── org/smsforwarder/
 │       └── SMSReceiver.java        # Native Android BroadcastReceiver
@@ -59,7 +59,7 @@ From the CLI menu, you can:
 If you wish to run the desktop GUI:
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-desktop.txt
 python main.py
 ```
 
