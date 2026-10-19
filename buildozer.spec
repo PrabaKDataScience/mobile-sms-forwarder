@@ -29,7 +29,7 @@ version = 1.0.0
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy,pyjnius
+requirements = python3,kivy,pyjnius,charset-normalizer==2.1.1
 
 # (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
 orientation = portrait
@@ -61,6 +61,9 @@ android.accept_sdk_license = True
 
 # (list) The Android architectures to build for.
 android.archs = arm64-v8a
+
+# (str) python-for-android branch to use
+p4a.branch = develop
 
 # (list) Java source folders to add
 android.add_src = src
