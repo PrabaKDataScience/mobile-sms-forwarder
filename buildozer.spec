@@ -12,6 +12,9 @@ package.domain = org.smsforwarder
 # (str) Source code where the main.py lives
 source.dir = .
 
+# (str) Icon of the application
+icon.filename = %(source.dir)s/icon.png
+
 # (list) Source files to include (let empty to include all the files)
 source.include_exts = py,png,jpg,kv,atlas,json,txt,java
 
@@ -75,8 +78,8 @@ services = forwarder:service.py
 # (bool) Android logcat filters to use
 android.logcat_filters = *:S python:D SMSForwarder:D SMSListener:D SMSForwarderReceiver:D
 
-# (str) Android entry point
-android.entrypoint = org.kivy.android.PythonActivity
+# (str) Android entry point (leave commented to use default SDL2 PythonActivity)
+# android.entrypoint = org.kivy.android.PythonActivity
 
 [buildozer]
 
